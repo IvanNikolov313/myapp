@@ -8,7 +8,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend/app/main.py:/app/main.py
+      - ./backend/requirements.txt:/app/requirements.txt
+
     env_file:
       - ./backend/.env
     depends_on:
