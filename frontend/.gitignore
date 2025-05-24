@@ -7,18 +7,81 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependency directories
+node_modules/
+dist/
+dist-ssr/
 *.local
 
+# Python cache and environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+env/
+*.sqlite3
+
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Docker files
+docker-compose.override.yml
+*.env  # environment variable files, exclude secrets
+
+# PyCharm
+*.iml
+.idea/
+
+# VS Code
+.history/
+
+# macOS system files
+.DS_Store
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Celery beat schedule file
+celerybeat-schedule
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Sphinx documentation build directory
+docs/_build/
+
+# Translations
+*.mo
+*.pot
+
+# Unit test / coverage reports
+.coverage
+.tox/
+.nox/
+
+# Pyre type checker
+.pyre/
