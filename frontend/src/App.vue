@@ -1,25 +1,8 @@
+<!-- src/App.vue -->
 <template>
-  <div>
-    <LoginForm v-if="!isLoggedIn" @login-success="handleLoginSuccess" />
-    <MainContent v-else />
-  </div>
+  <RouterView />
 </template>
 
-<script>
-import LoginForm from './components/LoginForm.vue'
-import MainContent from './components/MainContent.vue'
-
-export default {
-  components: { LoginForm, MainContent },
-  data() {
-    return {
-      isLoggedIn: false,
-    }
-  },
-  methods: {
-    handleLoginSuccess() {
-      this.isLoggedIn = true
-    },
-  },
-}
+<script setup>
+import { RouterView } from 'vue-router'
 </script>

@@ -7,7 +7,6 @@ from app.core.security import get_password_hash  # your passlib hashing function
 
 DATABASE_URL = "postgresql://appuser:password@myapp-db:5432/appdb"
 engine = create_engine(DATABASE_URL)
-Base.metadata.create_all(bind=engine)
 
 db = Session(bind=engine)
 
