@@ -1,22 +1,27 @@
 <template>
+  <div class="p-4 relative">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">Admin Menu</h2>
+      <button @click="logout" class="text-sm text-red-600 hover:underline">Logout</button>
+    </div>
 
-  <div class="flex" style="height: 100vh">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-gray-800 text-white p-4 flex flex-col">
-      <h2 class="text-xl font-bold mb-6">Admin Menu</h2>
-      <nav class="space-y-4">
-        <router-link to="/admin/dashboard" class="block hover:underline">📊 Dashboard</router-link>
-        <router-link to="/admin/settings" class="block hover:underline">⚙️ Settings</router-link>
-      </nav>
-    </aside>
+    <nav class="space-x-4 mb-6">
+  <router-link to="/admin/dashboard" class="text-blue-600 hover:underline">📊 Dashboard</router-link>
+  <router-link to="/admin/settings" class="text-blue-600 hover:underline">⚙️ Settings</router-link>
+  <router-link to="/admin/screener-configs" class="text-blue-600 hover:underline">🧪 Screener Configs</router-link>
+</nav>
 
-    <!-- Main content -->
-    <main class="flex-1 p-8 bg-gray-100 overflow-auto">
-      <router-view />
-    </main>
+
+    <router-view />
   </div>
 </template>
-
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const logout = () => {
+  localStorage.removeItem('token') // clear the stored auth token
+  router.push('/login')            // redirect to login page
+}
 </script>

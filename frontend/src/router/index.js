@@ -16,10 +16,18 @@ const routes = [
       next()
     },
     children: [
-      { path: 'dashboard', component: Dashboard },
-      { path: 'settings', component: Settings },
-    ],
+        { path: 'dashboard', component: Dashboard },
+        { path: 'settings', component: Settings },
+        {
+          path: 'screener-configs',
+          name: 'ScreenerConfigs',
+          component: () => import('../pages/ScreenerConfigs.vue'),
+          meta: { requiresAuth: true }
+        },
+      ],
+      
   },
+  
 ]
 
 const router = createRouter({

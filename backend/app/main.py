@@ -7,20 +7,22 @@ from app.db.session import SessionLocal
 from app.models.user import User
 from app.core.security import verify_password, create_access_token, verify_token
 
+# ✅ Import the actual router instance, not just the module
+from app.routers.screener_config import router as screener_config_router
+
 app = FastAPI()
 
-# For development, allow all origins. In production, restrict to your frontend URL only.
+# ✅ Set correct allowed origins (frontend runs on 5174)
 origins = [
+    "http://localhost:5174",
     "http://localhost:5173",
-    "http://localhost:5174",  # if your frontend might run here as well
-    "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # You can set ["*"] to allow all origins during dev
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -35,9 +37,7 @@ def get_db():
 
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(User).filter(User.email == email).first()
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         return False
     return user
 
@@ -50,12 +50,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    token = create_access_token(data={"sub": user.email})
+    return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/protected")
-def protected_route(token: str = Depends(oauth2_scheme)):
+def protected(token: str = Depends(oauth2_scheme)):
     payload = verify_token(token)
     if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication credentials")
-    return {"message": f"Hello, {payload.get('sub')}!"}
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    return {"message": f"Hello {payload.get('sub')}"}
+
+# ✅ Mount screener config router under /api
+app.include_router(screener_config_router, prefix="/api")
