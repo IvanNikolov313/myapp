@@ -8,7 +8,9 @@
     <nav class="space-x-4 mb-6">
   <router-link to="/admin/dashboard" class="text-blue-600 hover:underline">📊 Dashboard</router-link>
   <router-link to="/admin/settings" class="text-blue-600 hover:underline">⚙️ Settings</router-link>
-  <router-link to="/admin/screener-configs" class="text-blue-600 hover:underline">🧪 Screener Configs</router-link>
+  <router-link to="/admin/usa-dashboard">USA Dashboard</router-link>
+  <router-link to="/admin/usa-screener-configs">USA Screener Configs</router-link>
+  <router-link to="/admin/usa-scrapes">USA Scrapes</router-link>
 </nav>
 
 

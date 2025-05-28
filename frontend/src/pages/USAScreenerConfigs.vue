@@ -1,6 +1,6 @@
 <template>
   <div class="p-4">
-    <h1 class="text-2xl font-bold mb-4 text-center">Screener Configs</h1>
+    <h1 class="text-2xl font-bold mb-4 text-center">USA Screener Configs</h1>
 
     <div class="flex flex-col items-center space-y-2 mb-6">
       <input v-model="form.label" placeholder="Label" class="border p-1" />
