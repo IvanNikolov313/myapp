@@ -7,12 +7,15 @@ from app.db.session import SessionLocal
 from app.models.user import User
 from app.core.security import verify_password, create_access_token, verify_token
 
-# ✅ Import the actual router instance, not just the module
+# Import existing routers
 from app.routers.screener_config import router as screener_config_router
+
+# Import your new USA Master Summary router
+from app.routers import usa_master_sum  # Adjust if your path differs
 
 app = FastAPI()
 
-# ✅ Set correct allowed origins (frontend runs on 5174)
+# Allowed origins for CORS (frontend running on 5173 or 5174)
 origins = [
     "http://localhost:5174",
     "http://localhost:5173",
@@ -60,5 +63,8 @@ def protected(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return {"message": f"Hello {payload.get('sub')}"}
 
-# ✅ Mount screener config router under /api
+# Mount existing routers under /api
 app.include_router(screener_config_router, prefix="/api")
+
+# Mount your new USA master summary router under /api
+app.include_router(usa_master_sum.router, prefix="/api")
