@@ -1,0 +1,3 @@
+# Ignore backend runtime and scraped content
+backend/data/
+backend/screenshots/

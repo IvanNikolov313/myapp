@@ -9,7 +9,7 @@ from app.core.security import verify_password, create_access_token, verify_token
 
 # Import existing routers
 from app.routers.screener_config import router as screener_config_router
-
+from app.routers import scrapes
 # Import your new USA Master Summary router
 from app.routers import usa_master_sum  # Adjust if your path differs
 
@@ -66,5 +66,6 @@ def protected(token: str = Depends(oauth2_scheme)):
 # Mount existing routers under /api
 app.include_router(screener_config_router, prefix="/api")
 
+app.include_router(scrapes.router, prefix="/api")
 # Mount your new USA master summary router under /api
 app.include_router(usa_master_sum.router, prefix="/api")

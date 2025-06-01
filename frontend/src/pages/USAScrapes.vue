@@ -44,8 +44,15 @@ const fetchConfigs = async () => {
 }
 
 const triggerScrape = async (configId) => {
-  alert(`TODO: Trigger scrape for config ID ${configId}`)
-  // Future: axios.post('/scrapes', { config_id: configId })
+  try {
+    const res = await axios.post('/scrapes/run', {
+      screener_config_id: configId
+    })
+    alert(`✅ Scrape started!\nMessage: ${res.data.message}`)
+  } catch (err) {
+    console.error(err)
+    alert('❌ Scrape failed.\nSee console for details.')
+  }
 }
 
 onMounted(fetchConfigs)
