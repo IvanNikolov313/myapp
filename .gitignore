@@ -1,3 +1,65 @@
-# Ignore backend runtime and scraped content
+# ───────────── Python backend ─────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.env
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+*.log
+*.sqlite3
+celerybeat-schedule
+instance/
+.ipynb_checkpoints
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.dmypy.json
+.coverage
+.tox/
+.nox/
+.coverage.*
+.cover
+.py,cover
+
+# ───────────── Node/Vue frontend ─────────────
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.env*
+frontend/logs
+frontend/*.log
+frontend/.vscode/
+frontend/.idea/
+
+# ───────────── Backend scraped data ─────────────
 backend/data/
 backend/screenshots/
+
+# ───────────── Docker / Configs ─────────────
+docker-compose.override.yml
+*.env
+*.pid
+*.sock
+*.db
+
+# ───────────── Editor/OS/System files ─────────────
+.vscode/
+.idea/
+.history/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ───────────── Docs / Build tools ─────────────
+docs/_build/
+htmlcov/
