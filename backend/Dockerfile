@@ -10,6 +10,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ⬅️ Add this line to install Playwright browsers
+RUN playwright install --with-deps
+
 # Fix for missing CLI tools (alembic, etc.)
 ENV PATH="/root/.local/bin:$PATH"
 

@@ -1,10 +1,20 @@
+# Core Framework & Web Server
 fastapi
 uvicorn[standard]
+
+# Database & Migrations
 psycopg2-binary
-python-dotenv
 alembic
+
+# Environment & Utilities
+python-dotenv
 python-multipart
-python-jose[cryptography]
 passlib[bcrypt]
-python-jose
 bcrypt==4.0.1
+
+# Auth
+python-jose
+python-jose[cryptography]
+
+# Web Scraping / Automation
+playwright
