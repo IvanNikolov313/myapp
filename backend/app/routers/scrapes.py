@@ -5,7 +5,6 @@ from app.dependencies.db import get_db
 from app.models.screener_config import ScreenerConfig
 from playwright.sync_api import sync_playwright
 import re
-import time
 
 router = APIRouter()
 
@@ -37,13 +36,13 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        print("🌐 Navigating to Yahoo Screener with 100 results per page...")
+        print("🌐 Navigating to Yahoo Screener...")
         page.goto("https://finance.yahoo.com/research-hub/screener/equity/?start=0&count=100")
         page.wait_for_selector('button:has-text("Market Cap")', timeout=15000)
 
         print("📸 Screenshot: Before filters")
         page.evaluate("window.scrollTo(0, 0)")
-        page.screenshot(path="/app/screenshots/before_filters.png")
+        page.screenshot(path="/app/screenshots/before_filters_paginated.png")
 
         print("💰 Applying market cap filter...")
         page.click('button:has-text("Market Cap")')
@@ -58,30 +57,49 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         print("📸 Screenshot: Filters applied")
         page.wait_for_timeout(3000)
         page.evaluate("window.scrollTo(0, 0)")
-        page.screenshot(path="/app/screenshots/filters_applied.png")
+        page.screenshot(path="/app/screenshots/filters_applied_paginated.png")
 
-        next_button = page.locator('button[data-testid="next-page-button"]')
-        click_count = 0
+        companies = []
+        page_number = 1
 
-        print("⏭️ Clicking next page until the last page...")
         while True:
+            print(f"🔍 Scraping page {page_number}...")
+            page.wait_for_selector("table tbody tr", timeout=10000)
+            rows = page.locator("table tbody tr")
+            count = rows.count()
+
+            for i in range(count):
+                row = rows.nth(i)
+                try:
+                    name = row.locator("td").nth(2).locator("div").get_attribute("title") or ""
+                    symbol = row.locator("td").nth(1).locator("span.symbol").inner_text().strip()
+                    relative_link = row.locator("td").nth(1).locator("a").get_attribute("href")
+                    profile_link = f"https://finance.yahoo.com{relative_link}" if relative_link else None
+                    market_cap = row.locator("td").nth(9).inner_text().strip()
+
+                    companies.append({
+                        "name": name.strip(),
+                        "symbol": symbol,
+                        "profile_link": profile_link,
+                        "market_cap": market_cap
+                    })
+                except Exception as e:
+                    print(f"⚠️ Error parsing row {i} on page {page_number}: {e}")
+                    continue
+
+            next_button = page.locator('button[data-testid="next-page-button"]')
             if next_button.is_disabled():
-                print("⛔ Last page reached.")
+                print("⛔ Reached last page.")
                 break
 
-            if click_count == 0:
-                page.wait_for_timeout(1500)
-                page.screenshot(path="/app/screenshots/after_first_next.png")
-
+            print("⏭️ Clicking next...")
             next_button.click()
-            click_count += 1
-            page.wait_for_timeout(1500)
-            next_button = page.locator('button[data-testid="next-page-button"]')
-
-        print(f"📸 Screenshot: Final page after {click_count} nexts")
-        page.evaluate("window.scrollTo(0, 0)")
-        page.screenshot(path="/app/screenshots/final_page.png")
+            page_number += 1
+            page.wait_for_timeout(2000)
 
         browser.close()
 
-    return {"message": f"Scraping complete. Clicked next {click_count} times."}
+        return {
+            "message": f"Scraping complete. {len(companies)} companies extracted from {page_number} page(s).",
+            "companies": companies
+        }
