@@ -7,7 +7,7 @@
           <th>Dataset</th>
           <th>Number of Companies</th>
           <th>Number of Employees</th>
-          <th>Preview</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -15,17 +15,23 @@
           <td>Master Dataset</td>
           <td>{{ masterData.companies }}</td>
           <td>{{ masterData.employees }}</td>
-          <td><button disabled>Preview</button></td>
+          <td>
+            <button disabled>Preview</button>
+            <!-- No Scrape Executives or Download CSV buttons for master -->
+          </td>
         </tr>
         <tr v-for="scrape in scrapes" :key="scrape.id">
           <td>{{ scrape.name }}</td>
           <td>{{ scrape.total_companies }}</td>
           <td>{{ scrape.total_employees }}</td>
-          <td><button disabled>Preview</button></td>
+          <td>
+            <button disabled>Preview</button>
+            <button @click="scrapeExecutives(scrape.id)">Scrape Executives</button>
+            <button @click="downloadCSV(scrape.id)">Download CSV</button>
+          </td>
         </tr>
       </tbody>
     </table>
-    
   </div>
 </template>
 
@@ -38,11 +44,9 @@ const scrapes = ref([])
 
 const fetchSummary = async () => {
   try {
-    // Fetch master dataset summary (URL matches backend route)
     const masterRes = await axios.get('/usa/master-summary')
     masterData.value = masterRes.data
 
-    // Fetch scrapes summary (URL matches backend route)
     const scrapesRes = await axios.get('/usa/scrapes-summary')
     scrapes.value = scrapesRes.data
   } catch (error) {
@@ -50,10 +54,23 @@ const fetchSummary = async () => {
   }
 }
 
+const scrapeExecutives = async (scrapeId) => {
+  try {
+    const response = await axios.post(`/executives/scrape/${scrapeId}`)
+    alert(response.data.message)  // Show backend response message here
+  } catch (error) {
+    console.error('Failed to start scraping executives:', error)
+    alert('Failed to start scraping executives.')
+  }
+}
+
+const downloadCSV = (scrapeId) => {
+  window.open(`/api/scrapes/${scrapeId}/export-csv`, '_blank')
+}
+
 onMounted(() => {
   fetchSummary()
 })
-
 </script>
 
 <style scoped>
@@ -68,7 +85,12 @@ th, td {
   text-align: left;
 }
 button {
+  margin-left: 0.5rem;
   padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  opacity: 1;
+}
+button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }

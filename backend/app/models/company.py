@@ -3,6 +3,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
 from app.models.scrape import Scrape
+from app.models.executive import Executive
+
 class Company(Base):
     __tablename__ = "companies"
 
@@ -18,3 +20,4 @@ class Company(Base):
     country = Column(String, nullable=True)
 
     scrape = relationship("Scrape", back_populates="companies")
+    executives = relationship("Executive", back_populates="company", cascade="all, delete-orphan")
