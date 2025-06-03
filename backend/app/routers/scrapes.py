@@ -1,13 +1,21 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.dependencies.db import get_db
-from app.models.screener_config import ScreenerConfig
-from app.models.company import Company
+from sqlalchemy.exc import SQLAlchemyError
+from typing import List
 from playwright.sync_api import sync_playwright
 import re
 
-router = APIRouter()
+from app.dependencies.db import get_db
+from app.models.screener_config import ScreenerConfig
+from app.models.company import Company
+from app.models.scrape import Scrape
+from app.schemas.scrape import ScrapeOut
+
+router = APIRouter(
+    prefix="/scrapes",
+    tags=["Scrapes"]
+)
 
 class ScrapeRunRequest(BaseModel):
     screener_config_id: int
@@ -20,7 +28,7 @@ def parse_market_cap_range(range_str: str):
         return int(value) * (1_000_000 if unit == 'M' else 1_000_000_000)
     return convert(match[1], match[2]), convert(match[3], match[4])
 
-@router.post("/scrapes/run")
+@router.post("/run")
 def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
     config = db.query(ScreenerConfig).filter(ScreenerConfig.id == request.screener_config_id).first()
     if not config:
@@ -39,7 +47,6 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         page.goto("https://finance.yahoo.com/research-hub/screener/equity/?start=0&count=100", timeout=60000)
         page.wait_for_selector('button:has-text("Market Cap")', timeout=15000)
 
-        print("📸 Screenshot: Before filters", flush=True)
         page.evaluate("window.scrollTo(0, 0)")
         page.screenshot(path="/app/screenshots/before_filters_paginated.png")
 
@@ -53,7 +60,6 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         inputs.nth(1).fill(str(max_cap))
         page.click('button:has-text("Apply")')
 
-        print("📸 Screenshot: Filters applied", flush=True)
         page.wait_for_timeout(3000)
         page.evaluate("window.scrollTo(0, 0)")
         page.screenshot(path="/app/screenshots/filters_applied_paginated.png")
@@ -91,14 +97,13 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
                 print("⛔ Reached last page.", flush=True)
                 break
 
-            print(f"⏭️ Clicking next → now loading page {page_number + 1}...", flush=True)
             next_button.click()
             page_number += 1
             page.wait_for_timeout(2000)
 
         browser.close()
 
-    print(f"✅ Finished scraping {len(companies)} companies across {page_number} pages. Preparing to compare with DB...", flush=True)
+    print(f"✅ Scraped {len(companies)} companies across {page_number} pages. Comparing with DB...", flush=True)
 
     names = [c["name"] for c in companies if c["name"] and c["symbol"]]
     symbols = [c["symbol"] for c in companies if c["name"] and c["symbol"]]
@@ -108,8 +113,6 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         Company.symbol.in_(symbols)
     ).all()
 
-    print(f"🔍 Found {len(existing)} existing companies in DB (name + symbol match). Comparing...", flush=True)
-
     existing_set = set((e.name, e.symbol) for e in existing)
 
     new_companies = [
@@ -117,12 +120,61 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         if (c["name"], c["symbol"]) not in existing_set
     ]
 
+    print(f"🆕 Found {len(new_companies)} new companies to insert.", flush=True)
+
+    try:
+        scrape = Scrape(
+            config_id=request.screener_config_id,
+            total_companies=len(companies),
+            new_companies=len(new_companies)
+        )
+        db.add(scrape)
+        db.flush()  # get scrape.id before commit
+
+        for company in new_companies:
+            db.add(Company(
+                name=company["name"],
+                symbol=company["symbol"],
+                profile_link=company["profile_link"],
+                market_cap=company["market_cap"],
+                scrape_id=scrape.id
+            ))
+
+        db.commit()
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"DB error: {str(e)}")
+
     return {
         "message": (
-            f"Scraping complete. {len(companies)} companies extracted from {page_number} page(s). "
-            f"{len(new_companies)} are new."
+            f"Scraping complete. {len(companies)} companies extracted. "
+            f"{len(new_companies)} were new and saved."
         ),
+        "scrape_id": scrape.id,
         "total_companies": len(companies),
-        "new_companies_count": len(new_companies),
-        "companies": companies
+        "new_companies_count": len(new_companies)
     }
+
+
+@router.get("/", response_model=List[ScrapeOut])
+def list_scrapes(db: Session = Depends(get_db)):
+    return db.query(Scrape).order_by(Scrape.scraped_at.desc()).all()
+
+
+@router.get("/{scrape_id}", response_model=ScrapeOut)
+def get_scrape(scrape_id: int, db: Session = Depends(get_db)):
+    scrape = db.query(Scrape).filter(Scrape.id == scrape_id).first()
+    if not scrape:
+        raise HTTPException(status_code=404, detail="Scrape not found")
+    return scrape
+
+
+@router.delete("/{scrape_id}")
+def delete_scrape(scrape_id: int, db: Session = Depends(get_db)):
+    scrape = db.query(Scrape).filter(Scrape.id == scrape_id).first()
+    if not scrape:
+        raise HTTPException(status_code=404, detail="Scrape not found")
+    db.delete(scrape)
+    db.commit()
+    return {"message": f"Scrape {scrape_id} deleted."}

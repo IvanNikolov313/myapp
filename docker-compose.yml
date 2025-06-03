@@ -9,7 +9,6 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-
     env_file:
       - ./backend/.env
     depends_on:
@@ -38,6 +37,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./exports:/tmp           # <--- Added this line to map ./exports folder to /tmp inside container
     ports:
       - "5432:5432"
 
