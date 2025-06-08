@@ -1,15 +1,19 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List
 from playwright.sync_api import sync_playwright
 import re
+import csv
+from io import StringIO
 
 from app.dependencies.db import get_db
 from app.models.screener_config import ScreenerConfig
 from app.models.company import Company
 from app.models.scrape import Scrape
+from app.models.executive import Executive  # Adjust if needed
 from app.schemas.scrape import ScrapeOut
 
 router = APIRouter(
@@ -129,7 +133,7 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
             new_companies=len(new_companies)
         )
         db.add(scrape)
-        db.flush()  # get scrape.id before commit
+        db.flush()
 
         for company in new_companies:
             db.add(Company(
@@ -156,11 +160,9 @@ def run_scrape(request: ScrapeRunRequest, db: Session = Depends(get_db)):
         "new_companies_count": len(new_companies)
     }
 
-
 @router.get("/", response_model=List[ScrapeOut])
 def list_scrapes(db: Session = Depends(get_db)):
     return db.query(Scrape).order_by(Scrape.scraped_at.desc()).all()
-
 
 @router.get("/{scrape_id}", response_model=ScrapeOut)
 def get_scrape(scrape_id: int, db: Session = Depends(get_db)):
@@ -168,7 +170,6 @@ def get_scrape(scrape_id: int, db: Session = Depends(get_db)):
     if not scrape:
         raise HTTPException(status_code=404, detail="Scrape not found")
     return scrape
-
 
 @router.delete("/{scrape_id}")
 def delete_scrape(scrape_id: int, db: Session = Depends(get_db)):
@@ -178,3 +179,74 @@ def delete_scrape(scrape_id: int, db: Session = Depends(get_db)):
     db.delete(scrape)
     db.commit()
     return {"message": f"Scrape {scrape_id} deleted."}
+
+@router.get("/{scrape_id}/export-executives")
+def export_executives(scrape_id: int, db: Session = Depends(get_db)):
+    scrape = db.query(Scrape).filter(Scrape.id == scrape_id).first()
+    if not scrape:
+        raise HTTPException(status_code=404, detail="Scrape not found")
+
+    companies = db.query(Company).filter(Company.scrape_id == scrape_id).all()
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "name", "symbol", "profile_link", "marketCap",
+        "sector", "industry", "employee_name", "employee_position", "Country"
+    ])
+
+    for company in companies:
+        for exec in company.executives:
+            position = "" if exec.name == "Missed Exec" else exec.position
+            writer.writerow([
+                company.name,
+                company.symbol,
+                company.profile_link,
+                company.market_cap,
+                company.sector or "",
+                company.industry or "",
+                exec.name,
+                position,
+                company.country or ""
+            ])
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=executives_scrape_{scrape_id}.csv"}
+    )
+
+
+@router.get("/{scrape_id}/export-companies")
+def export_companies(scrape_id: int, db: Session = Depends(get_db)):
+    scrape = db.query(Scrape).filter(Scrape.id == scrape_id).first()
+    if not scrape:
+        raise HTTPException(status_code=404, detail="Scrape not found")
+
+    companies = db.query(Company).filter(Company.scrape_id == scrape_id).all()
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "name", "symbol", "profile_link", "marketCap",
+        "sector", "industry", "country"
+    ])
+
+    for company in companies:
+        writer.writerow([
+            company.name,
+            company.symbol,
+            company.profile_link,
+            company.market_cap,
+            company.sector or "",
+            company.industry or "",
+            company.country or ""
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=companies_scrape_{scrape_id}.csv"}
+    )

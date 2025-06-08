@@ -4,7 +4,7 @@
 
     <div v-if="configs.length === 0" class="text-center">Loading USA screener configs...</div>
 
-    <table v-else class="table-auto mx-auto border text-sm">
+<table class="table-auto border text-sm" style="margin-left: auto; margin-right: auto;">
       <thead>
         <tr class="bg-gray-100">
           <th class="p-2 border">Label</th>

@@ -1,4 +1,3 @@
-# app/schemas/usa_summary.py
 from pydantic import BaseModel
 
 class USAMasterSummary(BaseModel):
@@ -8,5 +7,8 @@ class USAMasterSummary(BaseModel):
 class USAScrapeSummary(BaseModel):
     id: int
     name: str
-    total_companies: int
-    total_employees: int
+    created_at: str
+    unique_companies: int  # <-- formerly new_companies
+    total_scraped: int     # <-- formerly total_companies
+    companies_scraped: int
+    executive_count: int

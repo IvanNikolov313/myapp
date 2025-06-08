@@ -31,19 +31,22 @@ def title_allowed(title: str) -> bool:
 
 @router.post("/scrape/{scrape_id}")
 def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
-    # Subquery: company_ids that already have executives
     exec_subquery = db.query(Executive.company_id).subquery()
 
-    # Query companies from this scrape that do NOT have executives yet
     companies = (
         db.query(Company)
         .filter(Company.scrape_id == scrape_id)
         .filter(~Company.id.in_(exec_subquery))
-        .all()  # <--- Removed .limit(20) here to get all companies without execs
+        .all()
     )
 
     if not companies:
-        raise HTTPException(status_code=404, detail="No companies found for scraping or all executives already scraped")
+        total_companies = db.query(Company).filter(Company.scrape_id == scrape_id).count()
+        already_scraped = db.query(Executive.company_id).join(Company).filter(Company.scrape_id == scrape_id).distinct().count()
+        return {
+            "message": f"All executives already scraped for scrape ID {scrape_id}. "
+                       f"{already_scraped} / {total_companies} companies already processed."
+        }
 
     results = []
 
@@ -55,7 +58,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
             print(f"Scraping company {idx}: {company.name}", flush=True)
 
             if not company.profile_link:
-                # Insert dummy exec for no profile link
                 dummy_exec = Executive(
                     company_id=company.id,
                     name="Missed Exec",
@@ -63,7 +65,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                 )
                 db.add(dummy_exec)
                 db.commit()
-
                 results.append({
                     "company_id": company.id,
                     "name": company.name,
@@ -84,7 +85,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
 
                 page_content = page.content()
                 if "Profile Information Not Available" in page_content:
-                    # Insert dummy exec for missing profile info
                     dummy_exec = Executive(
                         company_id=company.id,
                         name="Missed Exec",
@@ -92,7 +92,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                     )
                     db.add(dummy_exec)
                     db.commit()
-
                     results.append({
                         "company_id": company.id,
                         "name": company.name,
@@ -129,18 +128,15 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                     for row in exec_rows:
                         name_el = row.query_selector("td:nth-child(1)")
                         title_el = row.query_selector("td:nth-child(2)")
-
                         if not name_el or not title_el:
                             continue
                         name = name_el.inner_text().strip()
                         title = title_el.inner_text().strip()
-
                         if title_allowed(title):
                             executives.append({"name": name, "title": title})
                 except Exception:
                     executives = []
 
-                # Insert executives or dummy if none found
                 if executives:
                     for exec_data in executives:
                         new_exec = Executive(
@@ -158,7 +154,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                     db.add(dummy_exec)
 
                 db.commit()
-
                 results.append({
                     "company_id": company.id,
                     "name": company.name,
@@ -172,7 +167,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                 })
 
             except Exception as e:
-                # Insert dummy exec for crash
                 dummy_exec = Executive(
                     company_id=company.id,
                     name="Missed Exec",
@@ -180,7 +174,6 @@ def scrape_executives(scrape_id: int, db: Session = Depends(get_db)):
                 )
                 db.add(dummy_exec)
                 db.commit()
-
                 results.append({
                     "company_id": company.id,
                     "name": company.name,
